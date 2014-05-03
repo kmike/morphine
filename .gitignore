@@ -1,0 +1,12 @@
+*.pyc
+*.*~
+*.swp
+.ipynb_checkpoints
+notebooks/models
+Thumbs.db
+build/
+docs/_build
+dist/
+.idea/
+.tox
+MANIFEST
