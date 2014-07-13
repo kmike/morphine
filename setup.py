@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-from distutils.core import setup
+from setuptools import setup
 
 setup(
     name = 'morphine',
@@ -10,8 +10,19 @@ setup(
     description = 'Disambiguation engine for pymorphy2',
     long_description = open('README.rst').read(),
     license = 'MIT license',
-    packages = ['morphine',],
-    requires=['pymorphy2', 'pycrfsuite'],
+    packages = ['morphine'],
+    requires=['pymorphy2', 'pycrfsuite', 'toolz'],
+    install_requires=[
+        'python-crfsuite >= 0.6.1',
+        'toolz >= 0.7',
+        'pymorphy2 >= 0.8',
+    ],
+    extras_require = {
+        'fast':  [
+            "DAWG >= 0.7.3",
+            "cytoolz >= 0.7",
+        ],
+    },
     classifiers=[
           'Development Status :: 1 - Planning',
           'Intended Audience :: Developers',
@@ -25,6 +36,7 @@ setup(
           'Programming Language :: Python :: 3',
           'Programming Language :: Python :: 3.2',
           'Programming Language :: Python :: 3.3',
+          'Programming Language :: Python :: 3.4',
           'Programming Language :: Python :: Implementation :: CPython',
           'Topic :: Software Development :: Libraries :: Python Modules',
           'Topic :: Scientific/Engineering :: Information Analysis',

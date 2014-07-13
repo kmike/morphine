@@ -1,5 +1,9 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import
+try:
+    from cytoolz import functools, dicttoolz
+except ImportError:
+    from toolz import functoolz, dicttoolz
 
 
 class FeatureExtractor(object):
@@ -20,11 +24,18 @@ class FeatureExtractor(object):
     Parameters
     ----------
 
+    morph : pymorphy2.MorphAnalyzer
+        MorphAnalyzer instance.
+
     token_features : list of callables
         List of "token" feature functions. Each function accepts
         two arguments: ``token`` and ``parses``, and returns a dictionary
-        wich maps feature names to feature values. Dicts from all
-        token feature functions are merged by HtmlFeatureExtractor.
+        wich maps feature names to feature values.
+
+        ``token`` is the token text; ``parses`` is a result of parsing this
+        token by pymorphy2.
+
+        Dicts from all token feature functions are merged by FeatureExtractor.
         Example token feature (it just returns token text)::
 
             >>> def current_token_lower(token, parses):
@@ -32,67 +43,42 @@ class FeatureExtractor(object):
 
     global_features : list of callables, optional
         List of "global" feature functions. Each "global" feature function
-        should accept a single argument - a list
-        of ``(token, parses, feature_dict)`` tuples.
-        This list contains all tokens from the document and
-        features extracted by previous feature functions.
+        accepts 3 arguments:
 
-        "Global" feature functions are applied after "token" feature
+        * ``tokens`` - a list of tokens in this sentence;
+        * ``parsed_tokens`` - a list of pymorphy2 parses for all tokens
+          in a sentence;
+        * ``feature_dicts`` - feature dicts for each token (extracted by
+          token feature functions and modified by previous global feature
+          functions). Global feature functions should work by changing
+          ``feature_dict`` inplace.
+
+        Global feature functions are applied after token feature
         functions in the order they are passed.
-
-        They should change feature dicts ``feature_dict`` inplace.
-
-    min_df : integer or Mapping, optional
-        Feature values that have a document frequency strictly
-        lower than the given threshold are removed.
-        If ``min_df`` is integer, its value is used as threshold.
-
-        TODO: if ``min_df`` is a dictionary, it should map feature names
-        to thresholds.
-
     """
-    def __init__(self, token_features, global_features=None, min_df=1):
-        self.token_features = token_features
+    def __init__(self, morph, token_features, global_features=None):
+        self.morph = morph
+        self.combined_token_features = _CombinedFeatures(*token_features)
         self.global_features = global_features or []
-        self.min_df = min_df
 
     def fit(self, token_lists, y=None):
         self.fit_transform(token_lists)
         return self
 
     def fit_transform(self, token_lists, y=None, **fit_params):
-        X = [self.transform_single(tokens) for tokens in token_lists]
-        return self._pruned(X, low=self.min_df)
+        return [self.transform_single(tokens) for tokens in token_lists]
 
-    def transform(self, html_token_lists):
-        return [self.transform_single(html_tokens) for html_tokens in html_token_lists]
+    def transform(self, token_lists):
+        return [self.transform_single(tokens) for tokens in token_lists]
 
-    def transform_single(self, html_tokens):
-        feature_func = _CombinedFeatures(*self.token_features)
-        token_data = list(zip(html_tokens, map(feature_func, html_tokens)))
+    def transform_single(self, tokens):
+        parsed_tokens = [self.morph.parse(tok) for tok in tokens]
+        feature_dicts = list(map(self.combined_token_features, tokens, parsed_tokens))
 
         for feat in self.global_features:
-            feat(token_data)
+            feat(tokens, parsed_tokens, feature_dicts)
 
-        return [featdict for tok, featdict in token_data]
-
-    def _pruned(self, X, low=None):
-        if low is None or low <= 1:
-            return X
-        cnt = self._document_frequency(X)
-        keep = {k for (k, v) in cnt.items() if v >= low}
-        del cnt
-        return [
-            [{k: v for k, v in fd.items() if (k, v) in keep} for fd in doc]
-            for doc in X
-        ]
-
-    def _document_frequency(self, X):
-        cnt = Counter()
-        for doc in X:
-            seen_features = set(chain.from_iterable(fd.items() for fd in doc))
-            cnt.update(seen_features)
-        return cnt
+        return feature_dicts
 
 
 class _CombinedFeatures(object):
