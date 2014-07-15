@@ -10,3 +10,6 @@ dist/
 .idea/
 .tox
 MANIFEST
+.coverage
+htmlcov
+*.egg-info
