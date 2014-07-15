@@ -66,7 +66,7 @@ class FeatureExtractor(object):
         return self
 
     def fit_transform(self, token_lists, y=None, **fit_params):
-        return [self.transform_single(tokens) for tokens in token_lists]
+        return self.transform(token_lists)
 
     def transform(self, token_lists):
         return [self.transform_single(tokens) for tokens in token_lists]
