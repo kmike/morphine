@@ -16,9 +16,9 @@ def test_pattern(morph):
     sent = 'Летят гуси на юг'.split()
     assert fe.transform_single(sent) == [
         {'token_lower': 'летят', 'sentence_start': 1.0},
-        {'token_lower': 'гуси', 'token_lower[-1]': 'летят'},
-        {'token_lower': 'на', 'token_lower[-1]': 'гуси'},
-        {'token_lower': 'юг', 'sentence_end': 1.0, 'token_lower[-1]': 'на'},
+        {'token_lower': 'гуси', 'token_lower[i-1]': 'летят'},
+        {'token_lower': 'на', 'token_lower[i-1]': 'гуси'},
+        {'token_lower': 'юг', 'sentence_end': 1.0, 'token_lower[i-1]': 'на'},
     ]
 
 
@@ -34,9 +34,9 @@ def test_pattern2(morph):
     )
     assert fe.transform_single(sent) == [
         {'token_lower': 'летят', 'sentence_start': 1.0},
-        {'token_lower': 'гуси', 'token_lower[-1]/sentence_start[-1]': 'летят/1.0'},
-        {'token_lower': 'на', 'token_lower[-1]/sentence_start[-1]': 'гуси/0.0'},
-        {'token_lower': 'юг', 'sentence_end': 1.0, 'token_lower[-1]/sentence_start[-1]': 'на/0.0'},
+        {'token_lower': 'гуси', 'token_lower[i-1]/sentence_start[i-1]': 'летят/1.0'},
+        {'token_lower': 'на', 'token_lower[i-1]/sentence_start[i-1]': 'гуси/0.0'},
+        {'token_lower': 'юг', 'sentence_end': 1.0, 'token_lower[i-1]/sentence_start[i-1]': 'на/0.0'},
     ]
 
 
@@ -101,22 +101,22 @@ def test_pattern_callable_complex(morph):
     ])
     assert fe.transform_single(sent) == [
         {'title': True},
-        {'title': False, 'title[-1]/title[0]': 'True/False', 'not_title[-1]/not_title[0]/not_title[+1]': 'False/True/True'},
-        {'title': False, 'title[-1]/title[0]': 'False/False', 'not_title[-1]/not_title[0]/not_title[+1]': 'True/True/True'},
-        {'title': False, 'title[-1]/title[0]': 'False/False'},
+        {'title': False, 'title[i-1]/title[i]': 'True/False', 'not_title[i-1]/not_title[i]/not_title[i+1]': 'False/True/True'},
+        {'title': False, 'title[i-1]/title[i]': 'False/False', 'not_title[i-1]/not_title[i]/not_title[i+1]': 'True/True/True'},
+        {'title': False, 'title[i-1]/title[i]': 'False/False'},
     ]
 
 
 def test_pattern_names():
-    assert features.Pattern([0, 'foo']).name == 'foo[0]'
-    assert features.Pattern([-1, 'foo'], [2, 'bar']).name == 'foo[-1]/bar[+2]'
+    assert features.Pattern([0, 'foo']).name == 'foo[i]'
+    assert features.Pattern([-1, 'foo'], [2, 'bar']).name == 'foo[i-1]/bar[i+2]'
 
     def baz(token, parses):
         pass
 
-    assert features.Pattern([0, baz]).name == 'baz[0]'
-    assert features.Pattern([0, baz], [1, 'spam']).name == 'baz[0]/spam[+1]'
-    assert features.Pattern( [1, 'spam'], [0, baz]).name == 'spam[+1]/baz[0]'
+    assert features.Pattern([0, baz]).name == 'baz[i]'
+    assert features.Pattern([0, baz], [1, 'spam']).name == 'baz[i]/spam[i+1]'
+    assert features.Pattern([1, 'spam'], [0, baz]).name == 'spam[i+1]/baz[i]'
 
     assert features.Pattern([0, baz, 'egg']).name == 'egg'
 

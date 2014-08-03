@@ -156,9 +156,13 @@ class Pattern(object):
             raise ValueError("Patterns must be tuples with 2 or 3 elements")
 
     def _auto_feature_name(self, offset, feat):
-        name_template = '%s[%s]' if offset <= 0 else '%s[+%s]'
         func_name = feat.__name__ if callable(feat) else feat
-        return name_template % (func_name, offset)
+        if offset == 0:
+            return func_name + "[i]"
+        elif offset < 0:
+            return "%s[i%s]" % (func_name, offset)
+        else:
+            return "%s[i+%s]" % (func_name, offset)
 
     def _validate_offset(self, offset):
         if not isinstance(offset, int):
