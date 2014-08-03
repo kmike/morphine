@@ -118,30 +118,22 @@ class Pattern(object):
 
     def __init__(self, *patterns, **kwargs):
         self.patterns = []
-        self.index_low = 0
-        self.index_high = 0
-        names = []
+        index_low, index_high, names = 0, 0, []
 
         for pattern in patterns:
             offset, feat, name = self._parse_pattern(pattern)
             func = self._get_feature_func(feat)
             self.patterns.append((offset, func, name))
 
+            if index_low < -offset:
+                index_low = -offset
+            if index_high < offset:
+                index_high = offset
             names.append(name)
-            if self.index_low < -offset:
-                self.index_low = -offset
-            if self.index_high < offset:
-                self.index_high = offset
 
-        self.name = kwargs.pop('name', None)
-        if self.name is None:
-            self.name = self.separator.join(names)
-
-        if 'index_low' in kwargs:
-            self.index_low = kwargs['index_low']
-
-        if 'index_high' in kwargs:
-            self.index_high = kwargs['index_high']
+        self.index_low = kwargs.get('index_low', index_low)
+        self.index_high = kwargs.get('index_high', index_high)
+        self.name = kwargs.get('name', self.separator.join(names))
 
     def _parse_pattern(self, pattern):
         if len(pattern) == 2:
