@@ -16,6 +16,7 @@ setup(
         'python-crfsuite >= 0.6.1',
         'toolz >= 0.7',
         'pymorphy2 >= 0.8',
+        'six',
     ],
     extras_require = {
         'fast':  [

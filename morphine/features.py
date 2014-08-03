@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import
 import functools
+import six
 from morphine.utils import func_takes_argument
 
 
@@ -207,5 +208,4 @@ class Pattern(object):
                     if isinstance(value, float) and value not in {0.0, 1.0}:
                         raise ValueError("Values must be boolean or string for Pattern to work")
 
-                # FIXME: Python 2 unicode
-                featdict[self.name] = self.separator.join(map(str, values))
+                featdict[self.name] = self.separator.join(map(six.text_type, values))
