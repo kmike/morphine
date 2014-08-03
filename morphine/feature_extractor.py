@@ -8,8 +8,7 @@ except ImportError:
 
 class FeatureExtractor(object):
     """
-    This class extracts features from sentences. Each sentence should be a
-    list of ``(token, parses)`` tuples.
+    This class extracts features from sentences (lists of tokens).
 
     :meth:`fit` / :meth:`transform` / :meth:`fit_transform` interface
     may look familiar to you if you ever used scikit-learn_.
