@@ -117,42 +117,14 @@ class Pattern(object):
 
     def __init__(self, *patterns, **kwargs):
         self.patterns = []
-        names = []
         self.index_low = 0
         self.index_high = 0
+        names = []
 
         for pattern in patterns:
-            if len(pattern) == 2:
-                offset, feat = pattern
-                if not isinstance(offset, int):
-                    raise ValueError("Offset must be integer")
-
-                name_template = '%s[%s]' if offset <= 0 else '%s[+%s]'
-                func_name = feat.__name__ if callable(feat) else feat
-                name = name_template % (func_name, offset)
-            elif len(pattern) == 3:
-                offset, feat, name = pattern
-                if not isinstance(offset, int):
-                    raise ValueError("Offset must be integer")
-            else:
-                raise ValueError("Patterns must be tuples with 2 or 3 elements")
-
-
-            if callable(feat):
-                if not func_takes_argument(feat, 'feature_dict'):
-                    # fix "standard" token features
-                    @functools.wraps(feat)
-                    def _func(token, parses, feature_dict):
-                        return feat(token, parses)
-                    self.patterns.append((offset, _func, name))
-                else:
-                    self.patterns.append((offset, feat, name))
-
-            else:
-                # dictionary lookup
-                def _lookup(token, parses, feature_dict, feat=feat):
-                    return feature_dict.get(feat, self.missing_value)
-                self.patterns.append((offset, _lookup, name))
+            offset, feat, name = self._parse_pattern(pattern)
+            func = self._get_feature_func(feat)
+            self.patterns.append((offset, func, name))
 
             names.append(name)
             if self.index_low < -offset:
@@ -169,6 +141,48 @@ class Pattern(object):
 
         if 'index_high' in kwargs:
             self.index_high = kwargs['index_high']
+
+    def _parse_pattern(self, pattern):
+        if len(pattern) == 2:
+            offset, feat = pattern
+            self._validate_offset(offset)
+            return offset, feat, self._auto_feature_name(offset, feat)
+        elif len(pattern) == 3:
+            offset, feat, name = pattern
+            self._validate_offset(offset)
+            return offset, feat, name
+        else:
+            raise ValueError("Patterns must be tuples with 2 or 3 elements")
+
+    def _auto_feature_name(self, offset, feat):
+        name_template = '%s[%s]' if offset <= 0 else '%s[+%s]'
+        func_name = feat.__name__ if callable(feat) else feat
+        return name_template % (func_name, offset)
+
+    def _validate_offset(self, offset):
+        if not isinstance(offset, int):
+            raise ValueError("Offset must be integer")
+
+    @classmethod
+    def _add_feat_dict_argument_if_missing(cls, func):
+        if func_takes_argument(func, 'feature_dict'):
+            return func
+
+        @functools.wraps(func)
+        def _func(token, parses, feature_dict):
+            return func(token, parses)
+        return _func
+
+    def _get_feature_func(self, feat):
+        if callable(feat):  # "standard" token features
+            return self._add_feat_dict_argument_if_missing(feat)
+        else:  # dictionary lookup
+            return self._get_lookup_func(key=feat)
+
+    def _get_lookup_func(self, key):
+        def lookup(token, parses, feature_dict, key=key):
+            return feature_dict.get(key, self.missing_value)
+        return lookup
 
     def __call__(self, tokens, parsed_tokens, feature_dicts):
         sliced = feature_dicts[self.index_low:]
