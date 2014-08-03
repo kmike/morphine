@@ -49,9 +49,8 @@ def token_lower(token, parses):
 
 class _GrammemeFeatures(object):
     # TODO: weighting: max / sum / one-zero / ...?
-    def __init__(self, threshold=0.0, add_unambig=False):
+    def __init__(self, threshold=0.0):
         self.threshold = threshold
-        self.add_unambig = add_unambig
 
     def __call__(self, token, parses):
         parses = [p for p in parses if p.score >= self.threshold]
@@ -66,17 +65,25 @@ class Grammeme(_GrammemeFeatures):
     This feature adds all seen grammemes with their weights to the result.
     If there are several weights possible, the maximum is used.
     """
+    def __init__(self, threshold=0.0, add_unambig=False,
+                 key_prefix="Grammeme:", unambig_key_prefix='Grammeme:unambig:'):
+        super(Grammeme, self).__init__(threshold)
+        self.add_unambig = add_unambig
+        self.key_prefix = key_prefix
+        self.unambig_key_prefix = unambig_key_prefix
+
     def extract(self, parses):
         features = {}
         for p in parses:
+            # TODO: remove irrelevant grammemes
             for grammeme in p.tag.grammemes:
-                key = "Grammeme:" + grammeme
+                key = self.key_prefix + grammeme
                 # TODO/FIXME: sum instead of max or in addition to max
                 features[key] = max(p.score, features.get(key, 0))
 
                 # TODO/FIXME: grammeme is unambiguous when its scores sums to 1
                 if self.add_unambig and p.score == 1:
-                    features['unambig-'+key] = 1
+                    features[self.unambig_key_prefix + grammeme] = 1
         return features
 
 
@@ -85,25 +92,35 @@ class GrammemePair(_GrammemeFeatures):
     This feature adds all seen grammeme pairs with their weights to the result.
     If there are several weights possible, the maximum is used.
     """
+    def __init__(self, threshold=0.1, add_unambig=False,
+                 key_prefix="Grammeme:", unambig_key_prefix='Grammeme:unambig:'):
+        super(GrammemePair, self).__init__(threshold)
+        self.add_unambig = add_unambig
+        self.key_prefix = key_prefix
+        self.unambig_key_prefix = unambig_key_prefix
+
     def extract(self, parses):
         features = {}
         for p in parses:
+            # TODO: remove irrelevant grammemes
             grammemes = p.tag._grammemes_tuple
             for idx, grammeme in enumerate(grammemes):
                 for grammeme2 in grammemes[idx+1:]:
 
                     # make grammeme order always the same
                     if grammeme < grammeme2:
-                        key2 = "GrammemePair:%s,%s" % (grammeme, grammeme2)
+                        pair = ",".join([grammeme, grammeme2])
                     else:
-                        key2 = "GrammemePair:%s,%s" % (grammeme2, grammeme)
+                        pair = ",".join([grammeme2, grammeme])
+
+                    key = self.key_prefix + pair
 
                     # TODO/FIXME: sum instead of max or in addition to max
-                    features[key2] = max(p.score, features.get(key2, 0))
+                    features[key] = max(p.score, features.get(key, 0))
 
                     # TODO/FIXME: grammeme is unambiguous when its scores sums to 1
                     if self.add_unambig and p.score == 1:
-                        features['unambig-'+key2] = 1
+                        features[self.unambig_key_prefix + pair] = 1
 
         return features
 
