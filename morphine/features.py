@@ -137,6 +137,79 @@ class GrammemePair(_GrammemeFeatures):
 class Pattern(object):
     """
     Global feature that combines local features.
+    At each position it evaluate `*patterns` passed to constructor and
+    updates feature dicts accordingly.
+
+    Example::
+
+        >>> from pymorphy2 import MorphAnalyzer
+        >>> from morphine import features
+        >>> from morphine.feature_extractor import FeatureExtractor
+        >>> morph = MorphAnalyzer()
+        >>> fe = FeatureExtractor(
+        ...     morph=morph,
+        ...     token_features=[features.token_lower],
+        ...     global_features=[
+        ...         Pattern([-1, 'token_lower']),  # previous token
+        ...         Pattern([-1, 'token_lower'], [0, 'token_lower']),  # a bigram
+        ...     ]
+        ... )
+        >>> sent = ['Hello', 'my', 'darling']
+        >>> xseq = fe.transform_single(sent)
+        >>> len(sent) == len(xseq)
+        True
+        >>> xseq[2] == {
+        ...    'token_lower': 'darling',
+        ...    'token_lower[i-1]/token_lower[i]': 'my/darling',
+        ...    'token_lower[i-1]': 'my'
+        ... }
+        True
+        
+
+    Parameters
+    ----------
+
+    *patterns : tuples
+        :class:`Pattern` accept one or more patterns as positional parameters.
+        Each pattern should be a tuple with 2 or 3 elements: either
+        ``(offset, feature)`` or ``(offset, feature, name)``.
+
+        ``offset`` is an integer; for each position *i* feature values
+        for *i+offset* are calculated.
+
+        ``name`` is a name of this feature. If missing, it is auto-generated
+        from ``offset`` and ``feature``.
+
+        ``feature`` could be either a callable or a string.
+        If ``feature`` is a string then it is used as a lookup key in
+        the current feature dict. When ``feature`` is a callable it is called
+        to get feature value.
+
+        Callable ``feature`` can accept either 2 or 3 arguments:
+        either ``token`` and ``parses`` or ``token``, ``parses`` and
+        ``feature_dict``. ``token`` is a current token (as text);
+        ``parses`` is a list of token parses as returned by pymorphy2;
+        ``feature_dict`` is the current feature dict.
+
+        Callable features should return the value; they shouldn't update
+        ``feature_dict`` themselves.
+
+    name : str, optional
+        Name of this pattern (a key in feature dict to update).
+        If missing, it is auto-generated from the passed patterns.
+
+    index_low : integer, optional
+        Minimum index to evaluate patterns at. By default, patterns
+        are evaluated only at positions where all values are present.
+        I.e. if you have offset==-2 in the pattern, patterns won't be evaluated
+        at positions 0 and 1. You can override that by passing ``index_low``
+        keyword argument. Values that are not available will be replaced by
+        ``?`` signs.
+
+    index_high : integer, optional
+        Maximum index to evaluate patterns at. See :param:`index_low`.
+
+
     """
     separator = '/'
     out_value = '?'
