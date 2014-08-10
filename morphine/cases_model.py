@@ -3,78 +3,43 @@ from __future__ import absolute_import
 from collections import defaultdict
 
 import pycrfsuite
-
 from pymorphy2 import MorphAnalyzer
 from pymorphy2.tokenizers import simple_word_tokenize
 
+from morphine import features
+from morphine.feature_extractor import FeatureExtractor
 
-class CaseFeatureExtractor(object):
 
+class CaseFeatureExtractor(FeatureExtractor):
     THRESH = 0.1
 
-    def __init__(self, morph):
-        self.morph = morph
+    def __init__(self, morph=None):
+        morph = morph or MorphAnalyzer()
+        super(CaseFeatureExtractor, self).__init__(
+            morph=morph,
+            token_features=[
+                features.bias,
+                features.token_lower,
+                features.Grammeme(threshold=self.THRESH, add_unambig=True),
+                features.GrammemePair(threshold=self.THRESH, add_unambig=True),
+            ],
+            global_features=[
+                features.sentence_start,
+                features.sentence_end,
 
-    def _add_grammeme_features(self, token, namespace, features, k=1):
-        for p in self.morph.parse(token):
-            if p.score < self.THRESH:
-                continue
+                features.Pattern([-1, 'token_lower']),
+                features.Pattern([-2, 'token_lower']),
+                features.Pattern([+1, 'token_lower']),
 
-            for grammeme in p.tag.grammemes:
-                # add all grammemes
-                key = "%s:%s" % (namespace, grammeme)
-                features[key] = max(p.score*k, features[key])
-                if p.score == 1:
-                    features['unambig:'+key] = 1
+                features.Pattern([-1, 'Grammeme']),
+                features.Pattern([-2, 'Grammeme']),
+                features.Pattern([+1, 'Grammeme']),
 
-                # add all combinations of 2 grammemes
-                seen = set()
-                for grammeme2 in p.tag.grammemes:
-                    if grammeme2 == grammeme:
-                        continue
-
-                    if grammeme > grammeme2:
-                        key2 = "%s:%s,%s" % (namespace, grammeme, grammeme2)
-                    else:
-                        key2 = "%s:%s,%s" % (namespace, grammeme2, grammeme)
-
-                    if key2 in seen:
-                        continue
-                    seen.add(key2)
-                    features[key2] = max(p.score*k, features[key2])
-
-                    if p.score == 1:
-                        features['unambig:'+key2] = 1
-
-    def _get_features(self, tokens, i):
-        token = tokens[i]
-        features = defaultdict(float)
-        features['bias'] = 1
-
-        features['i:token:%s' % token.lower()] = 1
-        self._add_grammeme_features(token, "i", features, k=2)
-
-        if i > 0:
-            features['i-1:token:%s' % tokens[i-1].lower()] = 1
-            self._add_grammeme_features(tokens[i-1], "i-1", features)
-        else:
-            features['BOS'] = 1  # begin-of-sentence mark
-
-        if i > 1:
-            features['i-2:token:%s' % tokens[i-2].lower()] = 1
-            self._add_grammeme_features(tokens[i-2], "i-2", features)
-
-        if i < len(tokens) - 1:
-            features['i+1:token:%s' % tokens[i+1].lower()] = 1
-            self._add_grammeme_features(tokens[i+1], "i+1", features)
-        else:
-            features['EOS'] = 1
-
-
-        return dict(features)
-
-    def transform_sent(self, tokens):
-        return [self._get_features(tokens, i) for i in range(len(tokens))]
+                features.Pattern([-1, 'GrammemePair']),
+                features.Pattern([-2, 'GrammemePair']),
+                features.Pattern([+1, 'GrammemePair']),
+            ],
+        )
 
 
 class Tagger(object):
