@@ -50,45 +50,50 @@ def test_sentence_end(morph):
 def test_Grammeme(morph):
     feat = features.Grammeme()
     res = feat('на', morph.parse('на'))
-    assert sorted(res.keys()) == ['Grammeme:INTJ', 'Grammeme:PRCL', 'Grammeme:PREP']
-    assert res['Grammeme:PREP'] > res['Grammeme:PRCL']
-    assert res['Grammeme:PREP'] > res['Grammeme:INTJ']
+    assert sorted(res.keys()) == ['Grammeme']
+    assert sorted(res['Grammeme'].keys()) == ['INTJ', 'PRCL', 'PREP']
+    assert res['Grammeme']['PREP'] > res['Grammeme']['PRCL']
+    assert res['Grammeme']['PREP'] > res['Grammeme']['INTJ']
 
     res = feat('стали', morph.parse('стали'))
-    assert 'Grammeme:past' in res
-    assert 'Grammeme:accs' in res
-    assert res['Grammeme:VERB'] > res['Grammeme:NOUN']
+    assert 'past' in res['Grammeme']
+    assert 'accs' in res['Grammeme']
+    assert res['Grammeme']['VERB'] > res['Grammeme']['NOUN']
 
 
 def test_Grammeme_threshold(morph):
     feat = features.Grammeme(threshold=0.1)
     res = feat('на', morph.parse('на'))
-    assert sorted(res.keys()) == ['Grammeme:PREP']
-    assert res['Grammeme:PREP'] > 0.99
+    assert sorted(res['Grammeme'].keys()) == ['PREP']
+    assert res['Grammeme']['PREP'] > 0.99
 
 
 def test_GrammemePair(morph):
-    feat = features.GrammemePair()
+    feat = features.GrammemePair(threshold=0)
     res = feat('на', morph.parse('на'))
-    assert sorted(res.keys()) == []
+    assert sorted(res.keys()) == ['GrammemePair']
+    assert res['GrammemePair'] == {}
 
     res = feat('стали', morph.parse('стали'))
+    assert sorted(res.keys()) == ['GrammemePair']
 
-    assert 'GrammemePair:VERB,perf' in res
-    assert 'GrammemePair:VERB,indc' in res
-    assert 'GrammemePair:indc,perf' in res
-    assert 'GrammemePair:NOUN,inan' in res
-    assert 'GrammemePair:NOUN,femn' in res
-    assert 'GrammemePair:NOUN,nomn' in res
-    assert 'GrammemePair:gent,sing' in res
-    assert 'GrammemePair:loct,sing' in res
-    assert 'GrammemePair:femn,plur' in res
-    assert 'GrammemePair:VERB,loct' not in res
+    res_grp = res['GrammemePair']
+
+    assert 'VERB,perf' in res_grp
+    assert 'VERB,indc' in res_grp
+    assert 'indc,perf' in res_grp
+    assert 'NOUN,inan' in res_grp
+    assert 'NOUN,femn' in res_grp
+    assert 'NOUN,nomn' in res_grp
+    assert 'gent,sing' in res_grp
+    assert 'loct,sing' in res_grp
+    assert 'femn,plur' in res_grp
+    assert 'VERB,loct' not in res_grp
 
 
 def test_GrammemePair_threshold(morph):
     feat = features.GrammemePair(threshold=0.5)
     res = feat('стали', morph.parse('стали'))
-    assert 'GrammemePair:VERB,plur' in res
-    assert 'GrammemePair:NOUN,nomn' not in res
+    assert 'VERB,plur' in res['GrammemePair']
+    assert 'NOUN,nomn' not in res['GrammemePair']
 
