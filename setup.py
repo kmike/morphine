@@ -13,14 +13,14 @@ setup(
     packages = ['morphine'],
     requires=['pymorphy2', 'pycrfsuite', 'toolz'],
     install_requires=[
-        'python-crfsuite >= 0.6.1',
+        'python-crfsuite >= 0.7',
         'toolz >= 0.7',
         'pymorphy2 >= 0.8',
         'six',
     ],
     extras_require = {
         'fast':  [
-            "DAWG >= 0.7.3",
+            "DAWG >= 0.7.6",
             "cytoolz >= 0.7",
         ],
     },
