@@ -1,2 +1,5 @@
 #!/bin/sh
-py.test --doctest-modules --ignore setup.py "$@"
+py.test \
+    --doctest-modules \
+    --ignore setup.py --ignore build/* \
+    "$@"
