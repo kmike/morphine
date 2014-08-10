@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import
 try:
-    from cytoolz import functools, dicttoolz
+    from cytoolz import functoolz, dicttoolz
 except ImportError:
     from toolz import functoolz, dicttoolz
 
