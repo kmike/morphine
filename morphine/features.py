@@ -49,13 +49,15 @@ def token_lower(token, parses):
 
 class _GrammemeFeatures(object):
     default_name = None
+    default_threshold = 0.0
 
     # TODO: weighting: max / sum / one-zero / ...?
-    def __init__(self, name=None, threshold=0.0, add_unambig=False):
+    def __init__(self, name=None, threshold=None, add_unambig=False, ignore=None):
         self.name = name if name is not None else self.default_name
         self.unambig_name = self.name + '[unambig]'
-        self.threshold = threshold
+        self.threshold = threshold if threshold is not None else self.default_threshold
         self.add_unambig = add_unambig
+        self.ignore = set(ignore) if ignore is not None else set()
 
     def __call__(self, token, parses):
         parses = [p for p in parses if p.score >= self.threshold]
@@ -79,6 +81,8 @@ class Grammeme(_GrammemeFeatures):
         for p in parses:
             # TODO: remove irrelevant grammemes
             for grammeme in p.tag._grammemes_tuple:
+                if grammeme in self.ignore:
+                    continue
 
                 # TODO/FIXME: sum instead of max or in addition to max
                 features[grammeme] = max(p.score, features.get(grammeme, 0))
@@ -93,9 +97,13 @@ class Grammeme(_GrammemeFeatures):
         return res
 
 
-def _iter_grammeme_pairs(grammemes):
+def _iter_grammeme_pairs(grammemes, ignore):
     for idx, grammeme in enumerate(grammemes):
+        if grammeme in ignore:
+            continue
         for grammeme2 in grammemes[idx+1:]:
+            if grammeme2 in ignore:
+                continue
             # make grammeme order always the same
             if grammeme < grammeme2:
                 yield ",".join([grammeme, grammeme2])
@@ -109,18 +117,14 @@ class GrammemePair(_GrammemeFeatures):
     If there are several weights possible, the maximum is used.
     """
     default_name = 'GrammemePair'
-
-    def __init__(self, name=None, threshold=0.1, add_unambig=False):
-        super(GrammemePair, self).__init__(
-            name=name, threshold=threshold, add_unambig=add_unambig
-        )
+    default_threshold = 0.1
 
     def extract(self, parses):
         features = {}
         features_unambig = {}
         for p in parses:
             # TODO: remove irrelevant grammemes?
-            for pair in _iter_grammeme_pairs(p.tag._grammemes_tuple):
+            for pair in _iter_grammeme_pairs(p.tag._grammemes_tuple, self.ignore):
                 # TODO/FIXME: sum instead of max or in addition to max
                 features[pair] = max(p.score, features.get(pair, 0))
 
@@ -164,7 +168,7 @@ class Pattern(object):
         ...    'token_lower[i-1]': 'my'
         ... }
         True
-        
+
 
     Parameters
     ----------
