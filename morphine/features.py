@@ -79,11 +79,8 @@ class Grammeme(_GrammemeFeatures):
         features_unambig = {}
 
         for p in parses:
-            # TODO: remove irrelevant grammemes
-            for grammeme in p.tag._grammemes_tuple:
-                if grammeme in self.ignore:
-                    continue
-
+            grammemes = [gr for gr in p.tag._grammemes_tuple if gr not in self.ignore]
+            for grammeme in grammemes:
                 # TODO/FIXME: sum instead of max or in addition to max
                 features[grammeme] = max(p.score, features.get(grammeme, 0))
 
@@ -97,13 +94,9 @@ class Grammeme(_GrammemeFeatures):
         return res
 
 
-def _iter_grammeme_pairs(grammemes, ignore):
+def _iter_grammeme_pairs(grammemes):
     for idx, grammeme in enumerate(grammemes):
-        if grammeme in ignore:
-            continue
         for grammeme2 in grammemes[idx+1:]:
-            if grammeme2 in ignore:
-                continue
             # make grammeme order always the same
             if grammeme < grammeme2:
                 yield ",".join([grammeme, grammeme2])
@@ -123,8 +116,8 @@ class GrammemePair(_GrammemeFeatures):
         features = {}
         features_unambig = {}
         for p in parses:
-            # TODO: remove irrelevant grammemes?
-            for pair in _iter_grammeme_pairs(p.tag._grammemes_tuple, self.ignore):
+            grammemes = [gr for gr in p.tag._grammemes_tuple if gr not in self.ignore]
+            for pair in _iter_grammeme_pairs(grammemes):
                 # TODO/FIXME: sum instead of max or in addition to max
                 features[pair] = max(p.score, features.get(pair, 0))
 
