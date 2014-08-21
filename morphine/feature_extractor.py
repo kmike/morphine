@@ -71,13 +71,16 @@ class FeatureExtractor(object):
         return [self.transform_single(tokens) for tokens in token_lists]
 
     def transform_single(self, tokens):
+        return self.transform_and_parse_single(tokens)[1]
+
+    def transform_and_parse_single(self, tokens):
         parsed_tokens = [self.morph.parse(tok) for tok in tokens]
         feature_dicts = list(map(self.combined_token_features, tokens, parsed_tokens))
 
         for feat in self.global_features:
             feat(tokens, parsed_tokens, feature_dicts)
 
-        return feature_dicts
+        return parsed_tokens, feature_dicts
 
 
 class _CombinedFeatures(object):

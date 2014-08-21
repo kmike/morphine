@@ -18,7 +18,10 @@ def single_value(func):
     key = func.__name__
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
-        return {key: func(*args, **kwargs)}
+        value = func(*args, **kwargs)
+        if value is None:
+            return {}
+        return {key: value}
     return wrapper
 
 
@@ -47,21 +50,40 @@ def token_lower(token, parses):
     return token.lower()
 
 
+class Drop(object):
+    def __init__(self, key):
+        self.key = key
+
+    def __call__(self, tokens, parsed_tokens, feature_dicts):
+        for featdict in feature_dicts:
+            if self.key in featdict:
+                del featdict[self.key]
+
+
 class _GrammemeFeatures(object):
     default_name = None
     default_threshold = 0.0
 
     # TODO: weighting: max / sum / one-zero / ...?
-    def __init__(self, name=None, threshold=None, add_unambig=False, ignore=None):
+    def __init__(self, name=None, threshold=None, add_unambig=False, ignore=None, only=None):
         self.name = name if name is not None else self.default_name
         self.unambig_name = self.name + '[unambig]'
         self.threshold = threshold if threshold is not None else self.default_threshold
         self.add_unambig = add_unambig
         self.ignore = set(ignore) if ignore is not None else set()
+        self.only = set(only) if only is not None else None
 
     def __call__(self, token, parses):
         parses = [p for p in parses if p.score >= self.threshold]
         return self.extract(parses)
+
+    def _filtered_grammemes(self, parse):
+        grammemes = [gr for gr in parse.tag._grammemes_tuple if gr not in self.ignore]
+        if self.only is not None:
+            grammemes = [gr for gr in grammemes if gr in self.only]
+            if not grammemes:
+                grammemes = ['NA']
+        return grammemes
 
     def extract(self, parses):
         raise NotImplementedError()
@@ -79,8 +101,7 @@ class Grammeme(_GrammemeFeatures):
         features_unambig = {}
 
         for p in parses:
-            grammemes = [gr for gr in p.tag._grammemes_tuple if gr not in self.ignore]
-            for grammeme in grammemes:
+            for grammeme in self._filtered_grammemes(p):
                 # TODO/FIXME: sum instead of max or in addition to max
                 features[grammeme] = max(p.score, features.get(grammeme, 0))
 
@@ -116,7 +137,7 @@ class GrammemePair(_GrammemeFeatures):
         features = {}
         features_unambig = {}
         for p in parses:
-            grammemes = [gr for gr in p.tag._grammemes_tuple if gr not in self.ignore]
+            grammemes = self._filtered_grammemes(p)
             for pair in _iter_grammeme_pairs(grammemes):
                 # TODO/FIXME: sum instead of max or in addition to max
                 features[pair] = max(p.score, features.get(pair, 0))
