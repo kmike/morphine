@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import
-from collections import defaultdict
 
 import pycrfsuite
 from pymorphy2 import MorphAnalyzer
@@ -11,17 +10,18 @@ from morphine.feature_extractor import FeatureExtractor
 
 
 class CaseFeatureExtractor(FeatureExtractor):
-    THRESH = 0.1
+    IGNORE = {'anim', 'inan', 'masc', 'femn', 'neut', 'intg', 'real', 'Ms-f'}
 
     def __init__(self, morph=None):
         morph = morph or MorphAnalyzer()
+
         super(CaseFeatureExtractor, self).__init__(
             morph=morph,
             token_features=[
                 features.bias,
                 features.token_lower,
-                features.Grammeme(threshold=self.THRESH, add_unambig=True),
-                features.GrammemePair(threshold=self.THRESH, add_unambig=True),
+                features.Grammeme(threshold=0.01, add_unambig=True, ignore=self.IGNORE),
+                features.GrammemePair(threshold=0.0, add_unambig=True, ignore=self.IGNORE),
             ],
             global_features=[
                 features.sentence_start,
@@ -29,14 +29,15 @@ class CaseFeatureExtractor(FeatureExtractor):
 
                 features.Pattern([-1, 'token_lower']),
                 features.Pattern([-2, 'token_lower']),
-                features.Pattern([+1, 'token_lower']),
 
                 features.Pattern([-1, 'Grammeme']),
-                features.Pattern([-2, 'Grammeme']),
                 features.Pattern([+1, 'Grammeme']),
 
+                features.Pattern([-2, 'Grammeme'], [-1, 'Grammeme']),
+                features.Pattern([-1, 'Grammeme'], [0, 'Grammeme']),
+                features.Pattern([-1, 'Grammeme'], [0, 'GrammemePair']),
+
                 features.Pattern([-1, 'GrammemePair']),
-                features.Pattern([-2, 'GrammemePair']),
                 features.Pattern([+1, 'GrammemePair']),
             ],
         )
