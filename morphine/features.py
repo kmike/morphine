@@ -227,7 +227,6 @@ class Pattern(object):
     index_high : integer, optional
         Maximum index to evaluate patterns at. See :param:`index_low`.
 
-
     """
     separator = '/'
     out_value = '?'
@@ -251,6 +250,11 @@ class Pattern(object):
         self.index_low = kwargs.get('index_low', index_low)
         self.index_high = kwargs.get('index_high', index_high)
         self.name = kwargs.get('name', self.separator.join(names))
+
+        if len(self.patterns) == 1:
+            self._get_combined_value = self._get_combined_value_single
+        else:
+            self._get_combined_value = self._get_combined_value_multi
 
     def _parse_pattern(self, pattern):
         if len(pattern) == 2:
@@ -302,8 +306,8 @@ class Pattern(object):
         sliced = feature_dicts[self.index_low:]
         if self.index_high:
             sliced = sliced[:-self.index_high]
+
         for pos, featdict in enumerate(sliced, start=self.index_low):
-            names = []
             values = []
             for offset, func, name in self.patterns:
                 index = pos + offset
@@ -312,13 +316,33 @@ class Pattern(object):
                 else:
                     value = self.out_value
                 values.append(value)
-                names.append(name)
 
-            if len(self.patterns) == 1:
-                featdict[self.name] = values[0]
-            else:
-                for value in values:
-                    if isinstance(value, float) and value not in {0.0, 1.0}:
-                        raise ValueError("Values must be boolean or string for Pattern to work")
+            featdict[self.name] = self._get_combined_value(values)
 
-                featdict[self.name] = self.separator.join(map(six.text_type, values))
+    def _get_combined_value_single(self, values):
+        return values[0]
+
+    def _get_combined_value_multi(self, values):
+        if all(isinstance(v, dict) for v in values):
+            # Cartesian product of all keys; values are multiplied.
+            combined_value = {}
+            for items in itertools.product(*(v.items() for v in values)):
+                _keys, _values = zip(*items)
+                name = self.separator.join(_keys)
+                value = reduce(mul, map(float, _values))
+                combined_value[name] = value
+            return combined_value
+
+        elif len(values) == 2 and isinstance(values[1], dict):
+            # (single feature, dict feature)
+            return {values[0]: values[1]}
+
+        elif len(values) == 2 and isinstance(values[0], dict):
+            # (dict feature, single feature)
+            return {values[1]: values[0]}
+
+        else:
+            for value in values:
+                if isinstance(value, float) and value not in {0.0, 1.0}:
+                    raise ValueError("Values must be boolean or string for Pattern to work")
+            return self.separator.join(map(six.text_type, values))

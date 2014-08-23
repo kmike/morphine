@@ -22,7 +22,7 @@ def test_pattern(morph):
     ]
 
 
-def test_pattern2(morph):
+def test_pattern_bigram(morph):
     sent = 'Летят гуси на юг'.split()
     fe = FeatureExtractor(morph,
         [features.token_lower],
@@ -38,6 +38,41 @@ def test_pattern2(morph):
         {'token_lower': 'на', 'token_lower[i-1]/sentence_start[i-1]': 'гуси/0.0'},
         {'token_lower': 'юг', 'sentence_end': 1.0, 'token_lower[i-1]/sentence_start[i-1]': 'на/0.0'},
     ]
+
+
+def test_pattern_cartesian(morph):
+    sent = 'Летят гуси на юг'.split()
+    fe = FeatureExtractor(morph,
+        [features.token_lower, features.Grammeme(threshold=0.1)],
+        [
+            features.Pattern([-1, 'Grammeme'], [0, 'Grammeme']),
+            features.Drop('Grammeme')
+        ],
+    )
+    xseq = fe.transform_single(sent)
+    assert xseq[0] == {'token_lower': 'летят'}
+    assert sorted(xseq[1].keys()) == sorted(['Grammeme[i-1]/Grammeme[i]', 'token_lower'])
+    assert xseq[1]['Grammeme[i-1]/Grammeme[i]']['VERB/NOUN'] == 1.0
+
+
+def test_pattern_bigram_with_dict(morph):
+    sent = 'Летят гуси на юг'.split()
+    fe = FeatureExtractor(morph,
+        [features.token_lower, features.Grammeme(threshold=0.1)],
+        [
+            features.Pattern([-1, 'Grammeme'], [0, 'token_lower']),
+            features.Pattern([-1, 'token_lower'], [0, 'Grammeme']),
+        ],
+    )
+    xseq = fe.transform_single(sent)
+    assert sorted(xseq[1].keys()) == sorted([
+        'Grammeme',
+        'Grammeme[i-1]/token_lower[i]',
+        'token_lower',
+        'token_lower[i-1]/Grammeme[i]',
+    ])
+    assert xseq[1]['Grammeme[i-1]/token_lower[i]'] == {'гуси': xseq[0]['Grammeme']}
+    assert xseq[1]['token_lower[i-1]/Grammeme[i]'] == {'летят': xseq[1]['Grammeme']}
 
 
 def test_pattern_kwargs(morph):
