@@ -137,15 +137,67 @@ class CRF(object):
 
         Returns
         -------
-        y : list of lists
+        y : list of lists of strings
             predicted labels
 
         """
-        y = []
-        tagger = self.tagger
-        for xseq in X:
-            y.append(tagger.tag(xseq))
-        return y
+        return list(map(self.predict_single, X))
+
+    def predict_single(self, xseq):
+        """
+        Make a prediction.
+
+        Parameters
+        ----------
+        X : list of dicts
+            feature dicts in python-crfsuite format
+
+        Returns
+        -------
+        y : list of strings
+            predicted labels
+
+        """
+        return self.tagger.tag(xseq)
+
+    def predict_marginals(self, X):
+        """
+        Make a prediction.
+
+        Parameters
+        ----------
+        X : list of lists of dicts
+            feature dicts in python-crfsuite format
+
+        Returns
+        -------
+        y : list of lists of dicts
+            predicted probabilities for each label at each position
+
+        """
+        return list(map(self.predict_marginals_single, X))
+
+    def predict_marginals_single(self, xseq):
+        """
+        Make a prediction.
+
+        Parameters
+        ----------
+        X : list of dicts
+            feature dicts in python-crfsuite format
+
+        Returns
+        -------
+        y : list of dicts
+            predicted probabilities for each label at each position
+
+        """
+        labels = self.tagger.labels()
+        self.tagger.set(xseq)
+        return [
+            {label: self.tagger.marginal(label, i) for label in labels}
+            for i in range(len(xseq))
+        ]
 
     @property
     def tagger(self):
