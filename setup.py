@@ -17,6 +17,8 @@ setup(
         'toolz >= 0.7',
         'pymorphy2 >= 0.8',
         'six',
+        'tqdm',
+        'tabulate',
     ],
     extras_require = {
         'fast':  [
