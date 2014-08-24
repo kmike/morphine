@@ -236,10 +236,16 @@ class Pattern(object):
     missing_value = 0.0
 
     def __init__(self, *patterns, **kwargs):
+        # save original arguments to make pickling/unpickling easier
+        self._init_patterns = patterns
+        self._init_kwargs = kwargs
+        self._init()
+
+    def _init(self):
         self.patterns = []
         index_low, index_high, names = 0, 0, []
 
-        for pattern in patterns:
+        for pattern in self._init_patterns:
             offset, feat, name = self._parse_pattern(pattern)
             func = self._get_feature_func(feat)
             self.patterns.append((offset, func, name))
@@ -250,9 +256,9 @@ class Pattern(object):
                 index_high = offset
             names.append(name)
 
-        self.index_low = kwargs.get('index_low', index_low)
-        self.index_high = kwargs.get('index_high', index_high)
-        self.name = kwargs.get('name', self.separator.join(names))
+        self.index_low = self._init_kwargs.get('index_low', index_low)
+        self.index_high = self._init_kwargs.get('index_high', index_high)
+        self.name = self._init_kwargs.get('name', self.separator.join(names))
 
         if len(self.patterns) == 1:
             self._get_combined_value = self._get_combined_value_single
@@ -349,3 +355,13 @@ class Pattern(object):
                 if isinstance(value, float) and value not in {0.0, 1.0}:
                     raise ValueError("Values must be boolean or string for Pattern to work")
             return self.separator.join(map(six.text_type, values))
+
+    def __getstate__(self):
+        return {
+            '_init_patterns': self._init_patterns,
+            '_init_kwargs': self._init_kwargs,
+        }
+
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+        self._init()
