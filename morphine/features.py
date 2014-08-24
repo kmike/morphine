@@ -1,7 +1,10 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import
 import functools
+import itertools
+from operator import mul
 import six
+from six.moves import reduce
 from morphine.utils import func_takes_argument
 
 
