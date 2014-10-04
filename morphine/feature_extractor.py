@@ -1,30 +1,42 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import
+from itertools import starmap
+from operator import mul
+from six.moves import reduce
 try:
     from cytoolz import functoolz, dicttoolz
 except ImportError:
     from toolz import functoolz, dicttoolz
+import pycrfsuite
+
+def get_parsed_sents(morph, sents):
+    return [
+        (sent, [morph.parse(t) for t in sent])
+        for sent in sents
+    ]
 
 
 class FeatureExtractor(object):
     """
-    This class extracts features from sentences (lists of tokens).
+    This class extracts features from sentences (lists of tokens and
+    their parses).
 
     :meth:`fit` / :meth:`transform` / :meth:`fit_transform` interface
     may look familiar to you if you ever used scikit-learn_.
     But there is one twist: for POS tagging task (and other sequence
     labelling tasks) a single observation is a sentence, not an individual word.
     So :meth:`fit` / :meth:`transform` / :meth:`fit_transform` methods accept
-    lists of sentences (lists of lists of token information), and return lists
-    of sentences' feature dicts (lists of lists of feature dicts).
+    list of parsed sentences (list of lists of token information),
+    and return lists of sentences' feature dicts (lists of lists of
+    feature dicts).
+
+    You can get parsed sentences using :func:`~get_parsed_sents` function.
+    Sentences should be parsed for efficiency.
 
     .. _scikit-learn: http://scikit-learn.org
 
     Parameters
     ----------
-
-    morph : pymorphy2.MorphAnalyzer
-        MorphAnalyzer instance.
 
     token_features : list of callables
         List of "token" feature functions. Each function accepts
@@ -55,32 +67,27 @@ class FeatureExtractor(object):
         Global feature functions are applied after token feature
         functions in the order they are passed.
     """
-    def __init__(self, morph, token_features, global_features=None):
-        self.morph = morph
+    def __init__(self, token_features, global_features=None):
         self.combined_token_features = _CombinedFeatures(*token_features)
         self.global_features = global_features or []
 
-    def fit(self, token_lists, y=None):
-        self.fit_transform(token_lists)
+    def fit(self, parsed_sents, y=None):
+        self.fit_transform(parsed_sents)
         return self
 
-    def fit_transform(self, token_lists, y=None, **fit_params):
-        return self.transform(token_lists)
+    def fit_transform(self, parsed_sents, y=None, **fit_params):
+        return self.transform(parsed_sents)
 
-    def transform(self, token_lists):
-        return [self.transform_single(tokens) for tokens in token_lists]
+    def transform(self, parsed_sents):
+        return list(starmap(self.transform_single, parsed_sents))
 
-    def transform_single(self, tokens):
-        return self.transform_and_parse_single(tokens)[1]
-
-    def transform_and_parse_single(self, tokens):
-        parsed_tokens = [self.morph.parse(tok) for tok in tokens]
+    def transform_single(self, tokens, parsed_tokens):
         feature_dicts = list(map(self.combined_token_features, tokens, parsed_tokens))
 
         for feat in self.global_features:
             feat(tokens, parsed_tokens, feature_dicts)
 
-        return parsed_tokens, feature_dicts
+        return feature_dicts
 
 
 class _CombinedFeatures(object):

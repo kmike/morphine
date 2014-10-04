@@ -2,6 +2,7 @@
 from __future__ import absolute_import
 import functools
 import itertools
+import math
 from operator import mul
 import six
 from six.moves import reduce
@@ -51,6 +52,16 @@ def token_identity(token, parses):
 @single_value
 def token_lower(token, parses):
     return token.lower()
+
+
+@single_value
+def suffix3(token, parses):
+    return token.lower()[-3:]
+
+
+@single_value
+def suffix2(token, parses):
+    return token.lower()[-2:]
 
 
 class Drop(object):
@@ -107,6 +118,7 @@ class Grammeme(_GrammemeFeatures):
             for grammeme in self._filtered_grammemes(p):
                 # TODO/FIXME: sum instead of max or in addition to max
                 features[grammeme] = max(p.score, features.get(grammeme, 0))
+                # features[grammeme] = features.get(grammeme, 0) + p.score
 
                 # TODO/FIXME: grammeme is unambiguous when its scores sums to 1?
                 if self.add_unambig and p.score == 1:
@@ -116,16 +128,6 @@ class Grammeme(_GrammemeFeatures):
         if self.add_unambig:
             res[self.unambig_name] = features_unambig
         return res
-
-
-def _iter_grammeme_pairs(grammemes):
-    for idx, grammeme in enumerate(grammemes):
-        for grammeme2 in grammemes[idx+1:]:
-            # make grammeme order always the same
-            if grammeme < grammeme2:
-                yield ",".join([grammeme, grammeme2])
-            else:
-                yield ",".join([grammeme2, grammeme])
 
 
 class GrammemePair(_GrammemeFeatures):
@@ -144,6 +146,7 @@ class GrammemePair(_GrammemeFeatures):
             for pair in _iter_grammeme_pairs(grammemes):
                 # TODO/FIXME: sum instead of max or in addition to max
                 features[pair] = max(p.score, features.get(pair, 0))
+                # features[pair] = features.get(pair, 0) + p.score
 
                 # TODO/FIXME: grammeme is unambiguous when its scores sums to 1
                 if self.add_unambig and p.score == 1:
@@ -153,6 +156,17 @@ class GrammemePair(_GrammemeFeatures):
         if self.add_unambig:
             res[self.unambig_name] = features_unambig
         return res
+
+
+def _iter_grammeme_pairs(grammemes):
+    for idx, grammeme in enumerate(grammemes):
+        for grammeme2 in grammemes[idx+1:]:
+            # make grammeme order always the same
+            if grammeme < grammeme2:
+                yield ",".join([grammeme, grammeme2])
+            else:
+                yield ",".join([grammeme2, grammeme])
+
 
 
 class Pattern(object):
