@@ -1,4 +1,6 @@
 pymorphy2 >= 0.8
 python-crfsuite >= 0.6.1
 cytoolz >= 0.7
+# tabulate
+# tqdm >= 1.0
 # toolz >= 0.7

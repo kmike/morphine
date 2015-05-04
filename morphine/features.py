@@ -182,7 +182,6 @@ class Pattern(object):
         >>> from morphine.feature_extractor import FeatureExtractor
         >>> morph = MorphAnalyzer()
         >>> fe = FeatureExtractor(
-        ...     morph=morph,
         ...     token_features=[features.token_lower],
         ...     global_features=[
         ...         Pattern([-1, 'token_lower']),  # previous token
@@ -190,7 +189,8 @@ class Pattern(object):
         ...     ]
         ... )
         >>> sent = ['Hello', 'my', 'darling']
-        >>> xseq = fe.transform_single(sent)
+        >>> parsed = [morph.parse(word) for word in sent]
+        >>> xseq = fe.transform_single(sent, parsed)
         >>> len(sent) == len(xseq)
         True
         >>> xseq[2] == {

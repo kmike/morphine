@@ -5,7 +5,7 @@ from morphine.feature_extractor import FeatureExtractor
 
 
 def test_pattern(morph):
-    fe = FeatureExtractor(morph,
+    fe = FeatureExtractor(
         [features.token_lower],
         [
             features.sentence_start,
@@ -14,7 +14,8 @@ def test_pattern(morph):
         ],
     )
     sent = 'Летят гуси на юг'.split()
-    assert fe.transform_single(sent) == [
+    parsed = [morph.parse(t) for t in sent]
+    assert fe.transform_single(sent, parsed) == [
         {'token_lower': 'летят', 'sentence_start': 1.0},
         {'token_lower': 'гуси', 'token_lower[i-1]': 'летят'},
         {'token_lower': 'на', 'token_lower[i-1]': 'гуси'},
@@ -24,7 +25,8 @@ def test_pattern(morph):
 
 def test_pattern_bigram(morph):
     sent = 'Летят гуси на юг'.split()
-    fe = FeatureExtractor(morph,
+    parsed = [morph.parse(t) for t in sent]
+    fe = FeatureExtractor(
         [features.token_lower],
         [
             features.sentence_start,
@@ -32,7 +34,7 @@ def test_pattern_bigram(morph):
             features.Pattern([-1, 'token_lower'], [-1, 'sentence_start']),
         ],
     )
-    assert fe.transform_single(sent) == [
+    assert fe.transform_single(sent, parsed) == [
         {'token_lower': 'летят', 'sentence_start': 1.0},
         {'token_lower': 'гуси', 'token_lower[i-1]/sentence_start[i-1]': 'летят/1.0'},
         {'token_lower': 'на', 'token_lower[i-1]/sentence_start[i-1]': 'гуси/0.0'},
@@ -42,14 +44,15 @@ def test_pattern_bigram(morph):
 
 def test_pattern_cartesian(morph):
     sent = 'Летят гуси на юг'.split()
-    fe = FeatureExtractor(morph,
+    parsed = [morph.parse(t) for t in sent]
+    fe = FeatureExtractor(
         [features.token_lower, features.Grammeme(threshold=0.1)],
         [
             features.Pattern([-1, 'Grammeme'], [0, 'Grammeme']),
             features.Drop('Grammeme')
         ],
     )
-    xseq = fe.transform_single(sent)
+    xseq = fe.transform_single(sent, parsed)
     assert xseq[0] == {'token_lower': 'летят'}
     assert sorted(xseq[1].keys()) == sorted(['Grammeme[i-1]/Grammeme[i]', 'token_lower'])
     assert xseq[1]['Grammeme[i-1]/Grammeme[i]']['VERB/NOUN'] == 1.0
@@ -57,14 +60,15 @@ def test_pattern_cartesian(morph):
 
 def test_pattern_bigram_with_dict(morph):
     sent = 'Летят гуси на юг'.split()
-    fe = FeatureExtractor(morph,
+    parsed = [morph.parse(t) for t in sent]
+    fe = FeatureExtractor(
         [features.token_lower, features.Grammeme(threshold=0.1)],
         [
             features.Pattern([-1, 'Grammeme'], [0, 'token_lower']),
             features.Pattern([-1, 'token_lower'], [0, 'Grammeme']),
         ],
     )
-    xseq = fe.transform_single(sent)
+    xseq = fe.transform_single(sent, parsed)
     assert sorted(xseq[1].keys()) == sorted([
         'Grammeme',
         'Grammeme[i-1]/token_lower[i]',
@@ -77,7 +81,8 @@ def test_pattern_bigram_with_dict(morph):
 
 def test_pattern_kwargs(morph):
     sent = 'Летят гуси на юг'.split()
-    fe = FeatureExtractor(morph,
+    parsed = [morph.parse(t) for t in sent]
+    fe = FeatureExtractor(
         [features.token_lower],
         [
             features.sentence_start,
@@ -91,7 +96,7 @@ def test_pattern_kwargs(morph):
             ),
         ],
     )
-    assert fe.transform_single(sent) == [
+    assert fe.transform_single(sent, parsed) == [
         {'token_lower': 'летят', 'sentence_start': 1.0, 'low+1 BOS-1': 'гуси/?'},
         {'token_lower': 'гуси', 'low+1 BOS-1': 'на/1.0'},
         {'token_lower': 'на', 'low+1 BOS-1': 'юг/0.0'},
@@ -101,12 +106,13 @@ def test_pattern_kwargs(morph):
 
 def test_pattern_callable(morph):
     sent = 'Летят гуси на юг'.split()
-    fe = FeatureExtractor(morph, [], [
+    parsed = [morph.parse(t) for t in sent]
+    fe = FeatureExtractor([], [
         features.Pattern(
             [0, lambda token, parses: token.istitle(), 'title'],
         ),
     ])
-    assert fe.transform_single(sent) == [
+    assert fe.transform_single(sent, parsed) == [
         {'title': True},
         {'title': False},
         {'title': False},
@@ -116,11 +122,12 @@ def test_pattern_callable(morph):
 
 def test_pattern_callable_complex(morph):
     sent = 'Летят гуси на юг'.split()
+    parsed = [morph.parse(t) for t in sent]
 
     def not_title(token, parses, feature_dict):
         return not feature_dict.get('title', False)
 
-    fe = FeatureExtractor(morph, [], [
+    fe = FeatureExtractor([], [
         features.Pattern(
             [0, lambda token, parses: token.istitle(), 'title'],
         ),
@@ -134,7 +141,7 @@ def test_pattern_callable_complex(morph):
             [+1, not_title],
         )
     ])
-    assert fe.transform_single(sent) == [
+    assert fe.transform_single(sent, parsed) == [
         {'title': True},
         {'title': False, 'title[i-1]/title[i]': 'True/False', 'not_title[i-1]/not_title[i]/not_title[i+1]': 'False/True/True'},
         {'title': False, 'title[i-1]/title[i]': 'False/False', 'not_title[i-1]/not_title[i]/not_title[i+1]': 'True/True/True'},
