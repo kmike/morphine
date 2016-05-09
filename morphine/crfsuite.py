@@ -59,7 +59,7 @@ class CRF(object):
         self.algorithm = algorithm
         self.train_params = train_params
         self.modelfile = FileResource(
-            filename =model_filename,
+            filename=model_filename,
             keep_tempfiles=keep_tempfiles,
             suffix=".crfsuite",
             prefix="model"
@@ -149,7 +149,7 @@ class CRF(object):
 
         Parameters
         ----------
-        X : list of dicts
+        xseq : list of dicts
             feature dicts in python-crfsuite format
 
         Returns
@@ -183,7 +183,7 @@ class CRF(object):
 
         Parameters
         ----------
-        X : list of dicts
+        xseq : list of dicts
             feature dicts in python-crfsuite format
 
         Returns
